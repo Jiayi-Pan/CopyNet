@@ -12,9 +12,15 @@ from tqdm import tqdm
 from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
 
 
-def evaluate(encoder_decoder: EncoderDecoder, data_loader):
+def exact_match_score(all_target_seqs, all_output_seqs):
+    return sum([1 if target[0] == output else 0 for target, output in zip(all_target_seqs, all_output_seqs)]) / len(all_target_seqs)
 
-    loss_function = torch.nn.NLLLoss(ignore_index=0, reduce=False) # what does this return for ignored idxs? same length output?
+
+def evaluate(encoder_decoder: EncoderDecoder, data_loader, use_bleu=False):
+    # default to use exact match
+
+    # what does this return for ignored idxs? same length output?
+    loss_function = torch.nn.NLLLoss(ignore_index=0, reduce=False)
 
     losses = []
     all_output_seqs = []
@@ -25,23 +31,35 @@ def evaluate(encoder_decoder: EncoderDecoder, data_loader):
 
         sorted_lengths, order = torch.sort(input_lengths, descending=True)
 
-        input_variable = Variable(input_idxs[order, :][:, :max(input_lengths)], volatile=True)
+        input_variable = Variable(
+            input_idxs[order, :][:, :max(input_lengths)], volatile=True)
         target_variable = Variable(target_idxs[order, :], volatile=True)
         batch_size = input_variable.shape[0]
 
-        output_log_probs, output_seqs = encoder_decoder(input_variable, list(sorted_lengths))
+        output_log_probs, output_seqs = encoder_decoder(
+            input_variable, list(sorted_lengths))
         all_output_seqs.extend(trim_seqs(output_seqs))
-        all_target_seqs.extend([list(seq[seq > 0])] for seq in to_np(target_variable))
+        all_target_seqs.extend([list(seq[seq > 0])]
+                               for seq in to_np(target_variable))
 
-        flattened_log_probs = output_log_probs.view(batch_size * encoder_decoder.decoder.max_length, -1)
-        batch_losses = loss_function(flattened_log_probs, target_variable.contiguous().view(-1))
+        flattened_log_probs = output_log_probs.view(
+            batch_size * encoder_decoder.decoder.max_length, -1)
+        batch_losses = loss_function(
+            flattened_log_probs, target_variable.contiguous().view(-1))
         losses.extend(list(to_np(batch_losses)))
 
     mean_loss = len(losses) / sum(losses)
 
-    bleu_score = corpus_bleu(all_target_seqs, all_output_seqs, smoothing_function=SmoothingFunction().method1)
+    if use_bleu:
+        score = corpus_bleu(all_target_seqs, all_output_seqs,
+                            smoothing_function=SmoothingFunction().method1)
+    else:
+        score = exact_match_score(all_target_seqs, all_output_seqs)
+    print(f"""Sample output:
+              {all_target_seqs[0]}
+              {all_output_seqs[0]}""")
 
-    return mean_loss, bleu_score
+    return mean_loss, score
 
 
 def print_output(input_seq, encoder_decoder: EncoderDecoder, input_tokens=None, target_tokens=None, target_seq=None):
@@ -58,22 +76,28 @@ def print_output(input_seq, encoder_decoder: EncoderDecoder, input_tokens=None, 
     if target_tokens is not None:
         target_string = ' '.join(target_tokens)
     elif target_seq is not None:
-        target_string = seq_to_string(target_seq, idx_to_tok, input_tokens=input_tokens)
+        target_string = seq_to_string(
+            target_seq, idx_to_tok, input_tokens=input_tokens)
     else:
         target_string = ''
 
     if target_seq is not None:
-        target_eos_idx = list(target_seq).index(2) if 2 in list(target_seq) else len(target_seq)
-        target_outputs, _ = encoder_decoder(input_variable, lengths, targets=target_variable, teacher_forcing=1.0)
-        target_log_prob = sum([target_outputs[0, step_idx, target_idx] for step_idx, target_idx in enumerate(target_seq[:target_eos_idx+1])])
+        target_eos_idx = list(target_seq).index(
+            2) if 2 in list(target_seq) else len(target_seq)
+        target_outputs, _ = encoder_decoder(
+            input_variable, lengths, targets=target_variable, teacher_forcing=1.0)
+        target_log_prob = sum([target_outputs[0, step_idx, target_idx]
+                              for step_idx, target_idx in enumerate(target_seq[:target_eos_idx+1])])
 
     outputs, idxs = encoder_decoder(input_variable, lengths)
     idxs = idxs.data.view(-1)
     eos_idx = list(idxs).index(2) if 2 in list(idxs) else len(idxs)
-    string = seq_to_string(idxs[:eos_idx+1], idx_to_tok, input_tokens=input_tokens)
-    log_prob = sum([outputs[0, step_idx, idx] for step_idx, idx in enumerate(idxs[:eos_idx+1])])
+    string = seq_to_string(
+        idxs[:eos_idx+1], idx_to_tok, input_tokens=input_tokens)
+    log_prob = sum([outputs[0, step_idx, idx]
+                   for step_idx, idx in enumerate(idxs[:eos_idx+1])])
 
-    print('>', input_string, '\n',flush=True)
+    print('>', input_string, '\n', flush=True)
 
     if target_seq is not None:
         print('=', target_string, flush=True)
@@ -96,7 +120,8 @@ def main(model_name, use_cuda, n_print, idxs_print, use_train_dataset, val_size,
     if use_cuda:
         encoder_decoder = torch.load(model_path + model_name + '.pt')
     else:
-        encoder_decoder = torch.load(model_path + model_name + '.pt', map_location=lambda storage, loc: storage)
+        encoder_decoder = torch.load(
+            model_path + model_name + '.pt', map_location=lambda storage, loc: storage)
 
     if use_cuda:
         encoder_decoder = encoder_decoder.cuda()
@@ -125,7 +150,8 @@ def main(model_name, use_cuda, n_print, idxs_print, use_train_dataset, val_size,
             i_tokens = i_str.split()
             t_tokens = t_str.split()
 
-            print_output(i_seq, encoder_decoder, input_tokens=i_tokens, target_tokens=t_tokens, target_seq=t_seq)
+            print_output(i_seq, encoder_decoder, input_tokens=i_tokens,
+                         target_tokens=t_tokens, target_seq=t_seq)
 
     elif idxs_print is not None:
         for idx in idxs_print:
@@ -140,29 +166,32 @@ def main(model_name, use_cuda, n_print, idxs_print, use_train_dataset, val_size,
             i_tokens = i_str.split()[:i_length]
             t_tokens = t_str.split()
 
-            print_output(i_seq, encoder_decoder, input_tokens=i_tokens, target_tokens=t_tokens, target_seq=t_seq)
+            print_output(i_seq, encoder_decoder, input_tokens=i_tokens,
+                         target_tokens=t_tokens, target_seq=t_seq)
 
     else:
         evaluate(encoder_decoder, data_loader)
 
 
 if __name__ == '__main__':
-    random = random.Random(42)  # https://groups.google.com/forum/#!topic/nzpug/o4OW1O_4rgw
+    # https://groups.google.com/forum/#!topic/nzpug/o4OW1O_4rgw
+    random = random.Random(42)
 
-    arg_parser = argparse.ArgumentParser(description='Parse training parameters')
+    arg_parser = argparse.ArgumentParser(
+        description='Parse training parameters')
     arg_parser.add_argument('model_name', type=str,
                             help='The name of a subdirectory of ./model/ that '
-                             'contains encoder and decoder model files.')
+                            'contains encoder and decoder model files.')
 
     arg_parser.add_argument('--n_print', type=int,
                             help='Instead of evaluating the model on the entire dataset,'
-                             'n random examples from the dataset will be transformed.'
-                             'The output will be printed.')
+                            'n random examples from the dataset will be transformed.'
+                            'The output will be printed.')
 
     arg_parser.add_argument('--idxs_print', nargs='+', type=int,
                             help='Instead of evaluating the model on the entire dataset,'
-                             'the integers in this list will be used to select specific examples'
-                             'to transform. The output will be printed.')
+                            'the integers in this list will be used to select specific examples'
+                            'to transform. The output will be printed.')
 
     arg_parser.add_argument('--interact', action='store_true',
                             help='Take model inputs from the keyboard.')

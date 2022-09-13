@@ -3,9 +3,14 @@
 CopyNet extends the functionality of encoder-decoder models to allow the generation
 of output sequences that contain "out of vocabulary" tokens that appeared in the input sequence.
 
-> This is an re-implementation of CopyNet https://arxiv.org/abs/1603.06393, with code based on https://github.com/adamklec/copynet.
+## About this implementation
 
-The model is trained on sequence pairs. Create a directory to hold training files. Each file should have 2 lines of text.
+This is a re-implementation of [CopyNet](https://arxiv.org/abs/1603.06393), with code based from [code by adamklec](https://github.com/adamklec/copynet).
+
+The differences between this implementation and the previous implementation are:
+- a rewritten dataset class that is decoupled from file format
+- capability of using a pretrained word embedding (GLOVE in our test case)
+
 The first is the input sequence, the second is the target output sequnce.
 
 The tokens in each sequence should be seperated by spaces.

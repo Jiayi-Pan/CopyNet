@@ -19,6 +19,7 @@ def seq_to_string(seq, idx_to_tok, input_tokens=None):
     seq_length = (seq != 0).sum()
     words = []
     for idx in seq[:seq_length]:
+        idx = int(idx)
         if idx < vocab_size:
             words.append(idx_to_tok[idx])
         elif input_tokens is not None:
@@ -42,7 +43,8 @@ def to_one_hot(y, n_dims=None):
     y_tensor = y.data if isinstance(y, Variable) else y
     y_tensor = y_tensor.type(torch.LongTensor).contiguous().view(-1, 1)
     n_dims = n_dims if n_dims is not None else int(torch.max(y_tensor)) + 1
-    y_one_hot = torch.zeros(y_tensor.size()[0], n_dims).scatter_(1, y_tensor, 1)
+    y_one_hot = torch.zeros(
+        y_tensor.size()[0], n_dims).scatter_(1, y_tensor, 1)
     y_one_hot = y_one_hot.view(*y.shape, -1)
     return Variable(y_one_hot) if isinstance(y, Variable) else y_one_hot
 
@@ -65,9 +67,9 @@ def tokens_to_seq(tokens, tok_to_idx, max_length, use_extended_vocab, input_toke
             # If the token cannot be found in the input sequence use the unknown token.
 
             tok_to_idx_extension[token] = tok_to_idx_extension.get(token,
-                                 next((pos + len(tok_to_idx)
-                                       for pos, input_token in enumerate(input_tokens)
-                                       if input_token == token), 3))
+                                                                   next((pos + len(tok_to_idx)
+                                                                         for pos, input_token in enumerate(input_tokens)
+                                                                         if input_token == token), 3))
             idx = tok_to_idx_extension[token]
 
         elif use_extended_vocab:
