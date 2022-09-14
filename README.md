@@ -16,4 +16,4 @@ The first is the input sequence, the second is the target output sequnce.
 The tokens in each sequence should be seperated by spaces.
 
 ## Run
-To run the experiment, follow ```playground.ipynb``` step by step.
+To run the experiment, follow ```playground.ipynb``` step by step
