@@ -8,7 +8,7 @@ of output sequences that contain "out of vocabulary" tokens that appeared in the
 This is a re-implementation of [CopyNet](https://arxiv.org/abs/1603.06393), derived from [code by adamklec](https://github.com/adamklec/copynet).
 
 The differences between this implementation and the previous one are:
-- a rewritten dataset class that is decoupled from file format, which makes loading costum data much easier
+- a rewritten dataset class that is decoupled from file format, which makes loading custom data much easier
 - capability of using pretrained word embeddings (GLOVE in our test case)
 
 The first is the input sequence, the second is the target output sequnce.
