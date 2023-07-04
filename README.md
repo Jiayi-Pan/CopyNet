@@ -1,19 +1,15 @@
-# CopyNet
+# CopyNet: Enhanced Encoder-Decoder Model
 
-CopyNet extends the functionality of encoder-decoder models to allow the generation
-of output sequences that contain "out of vocabulary" tokens that appeared in the input sequence.
+CopyNet enhances the capability of standard encoder-decoder models, allowing them to generate output sequences that include "out of vocabulary" tokens present in the input sequence.
 
-## About this implementation
+## About this Re-implementation
 
-This is a re-implementation of [CopyNet](https://arxiv.org/abs/1603.06393), derived from [code by adamklec](https://github.com/adamklec/copynet).
+This project is a refined re-implementation of [CopyNet](https://arxiv.org/abs/1603.06393), which originally inspired from [code by adamklec](https://github.com/adamklec/copynet). This version introduces several improvements over the original:
 
-The differences between this implementation and the previous one are:
-- a rewritten dataset class that is decoupled from file format, which makes loading custom data much easier
-- capability of using pretrained word embeddings (GLOVE in our test case)
+- A completely re-engineered dataset class that is abstracted from file formats, thus making it simpler to load your custom data.
+- Integration with pretrained word embeddings (demonstrated using GLOVE), which facilitates improved model performance.
 
-The first is the input sequence, the second is the target output sequnce.
+Each line of input is composed of two sequences: the first represents the input sequence, while the second acts as the target output sequence. Tokens in each sequence should be separated by spaces.
 
-The tokens in each sequence should be seperated by spaces.
-
-## Run
-To run the experiment, follow ```playground.ipynb``` step by step
+## Execution
+To utilize this implementation, follow the instructions provided in ```playground.ipynb``` in sequence.
